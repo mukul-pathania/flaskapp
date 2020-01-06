@@ -2,14 +2,22 @@
 #with the database connection and to use the Exceptions defined in it.
 from DBcm import *
 #app is imported to use app.confing["DB_CONFIG"]
-from app import app
+from app import app, login
+#This import will let us store and check password hashes.
+from werkzeug.security import generate_password_hash, check_password_hash
+#
+from flask_login import UserMixin
 
 
-class Users():
-    def __init__(self, id=None, username=None, rollno=None,
-                 email=None, password_hash=None):
-        """THIS IS THE MODEL CLASS FOR THE "users" TABLE IN THE DATABASE."""
 
+@login.user_loader
+def load_user(id):
+    return get_user(int(id))
+
+class Users(UserMixin):
+    """THIS IS THE MODEL CLASS FOR THE "users" TABLE IN THE DATABASE."""
+    def __init__(self, id=None,username=None,rollno=None,email=None, 
+            password_hash=None):
         #The BIF's int() and string() are used to store the variables
         #as I want them to be.
         self.id=int(id)
@@ -19,8 +27,31 @@ class Users():
         self.password_hash=str(password_hash)
 
     def __repr__(self):
-        return '<User {}>'.format(self.username)
+        return '<Users {}>'.format(self.username)
 
+    def set_password(self,password):
+        self.password_hash=generate_password_hash(password)
+
+    def check_password(self,password):
+        return check_password_hash(self.password_hash, password)
+
+
+class Posts():
+    """THIS IS A MODEL CLASS FOR THE "posts" TABLE IN DATABASE."""
+    def __init__(self, id, body, timestamp, link, user_id):
+        #This will initialise the posts object.
+        self.id=int(id)
+        self.body= str(body)
+        self.timestamp=str(timestamp)
+        self.link=str(link)
+        self.user_id=int(user_id)
+
+    def __repr__(self):
+        return "<Posts {}>".format(self.body)
+
+
+#Note for me.
+"""I will be using the function utc_timestamp in the database."""
 
 
 def get_user(id=None, username=None, rollno=None,
