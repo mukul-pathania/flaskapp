@@ -1,4 +1,5 @@
 from flask import render_template, flash, redirect, url_for, request
+from flask import abort
 from app import app
 from app.forms import LoginForm, RegistrationForm
 from flask_login import current_user, login_user
@@ -54,9 +55,26 @@ def register():
         user=Users(username=form.username.data, rollno=form.rollno.data,
                    email=form.email.data)
         user.set_password(form.password.data)
+        user.write()
         #I need to define a method for class Users to write 
         #objects to database
         #user.write()
         flash("Congratulations, you are now a registered user!")
         return redirect(url_for("login"))
     return render_template("register.html", title="Register", form=form)
+
+
+@app.route("/user/<username>")
+@login_required
+def user(username):
+    user=get_user(username=username)
+    if not user:
+        """If no Users object is found with the given username then the
+        abort function forces a 404 error."""
+        abort(404)
+    posts=[{"author": user, "body": "Test post #1"},
+            {"author": user, "body": "Test post #2"}
+            ]
+    return render_template("user.html", user=user, posts=posts)
+
+

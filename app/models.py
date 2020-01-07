@@ -25,7 +25,7 @@ class Users(UserMixin):
         #It is put here because when a new user fills the registration form
         #a user object is created and value for id is not provided and 
         #the default value None is used which causes an error when it is
-        #oassed to int() BIF.
+        #passed to int() BIF.
         if id:
             self.id=int(id)
         else:
@@ -44,6 +44,30 @@ class Users(UserMixin):
     def check_password(self,password):
         return check_password_hash(self.password_hash, password)
 
+    def write(self):
+        """This function is written to write the newly created users
+        into the database after they fill out the registration form."""
+        
+#        _SQL = "INSERT INTO users (username,rollno,email,password_hash)\
+#               VALUES ({},{},{},{})".format(self.username, self.rollno,
+#                self.email,self.password_hash)
+        
+# The above commented out query doesn't work well (unexpectedly). 
+        _SQLsub = "INSERT INTO users(username,rollno,email,password_hash)\
+                VALUES('{}','{}','{}','{}')"
+        _SQL = _SQLsub.format(self.username,self.rollno,self.email,
+                self.password_hash)
+        try:
+            with UseDatabase(app.config["DB_CONFIG"]) as cursor:
+                cursor.execute(_SQL)
+        except ConnectionError as err:
+            print("Is your database switched on? Error: ", str(err))
+        except CredentialsError as err:
+            print("User-id/Password issues. Error: ", str(err))
+        except SQLError as err:
+            print("Is your query correct? Error: ", str(err))
+        except Exception as err:
+            print("Something went wrong: ", str(err))
 
 class Posts():
     """THIS IS A MODEL CLASS FOR THE "posts" TABLE IN DATABASE."""
