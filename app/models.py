@@ -20,7 +20,16 @@ class Users(UserMixin):
             password_hash=None):
         #The BIF's int() and string() are used to store the variables
         #as I want them to be.
-        self.id=int(id)
+
+        #Don't touch this until you understand this if-else conditions.
+        #It is put here because when a new user fills the registration form
+        #a user object is created and value for id is not provided and 
+        #the default value None is used which causes an error when it is
+        #oassed to int() BIF.
+        if id:
+            self.id=int(id)
+        else:
+            self.id=id
         self.username=str(username)
         self.rollno=str(rollno)
         self.email=str(email)
@@ -126,7 +135,7 @@ def get_user(id=None, username=None, rollno=None,
         else:
             #If no users with the given info exist just
             #print the following message and return None.
-            print("No users exist with the given info.")
+            #print("No users exist with the given info.")
             return None
     #The following exceptions are defined in the DBcm module and are 
     #reused as is from the book Head First Python(Which taught me Python.)
