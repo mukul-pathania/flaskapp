@@ -6,6 +6,15 @@ from flask_login import current_user, login_user
 from flask_login import logout_user, login_required
 from app.models import Users, get_user
 from werkzeug.urls import url_parse
+from datetime import datetime
+
+
+
+@app.before_request
+def before_request():
+    if current_user.is_authenticated:
+        current_user.last_seen = datetime.utcnow()
+        current_user.update()
 
 
 @app.route("/")

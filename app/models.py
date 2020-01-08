@@ -7,6 +7,8 @@ from app import app, login
 from werkzeug.security import generate_password_hash, check_password_hash
 #
 from flask_login import UserMixin
+#hashlib is imported to use the avatar service in the Users class.
+from hashlib import md5
 
 
 
@@ -17,7 +19,7 @@ def load_user(id):
 class Users(UserMixin):
     """THIS IS THE MODEL CLASS FOR THE "users" TABLE IN THE DATABASE."""
     def __init__(self, id=None,username=None,rollno=None,email=None, 
-            password_hash=None):
+            password_hash=None, about_me=None, last_seen=None):
         #The BIF's int() and string() are used to store the variables
         #as I want them to be.
 
@@ -34,6 +36,8 @@ class Users(UserMixin):
         self.rollno=str(rollno)
         self.email=str(email)
         self.password_hash=str(password_hash)
+        self.about_me=str(about_me)
+        self.last_seen=str(last_seen)
 
     def __repr__(self):
         return '<Users {}>'.format(self.username)
@@ -43,6 +47,17 @@ class Users(UserMixin):
 
     def check_password(self,password):
         return check_password_hash(self.password_hash, password)
+
+    def avatar(self,size):
+        """This method uses the user's email id to get a profile
+        image for him from gravatar. The query arguments d and s define
+        what to do when the user is not registered and teh size of the image
+        to be returned respectively.
+        The size argument will return the image scaled to that size 
+        in pixels."""
+        digest = md5(self.email.lower().encode("utf-8")).hexdigest()
+        return "https://www.gravatar.com/avatar/{}?d=identicon&s={}".format(
+                digest, size)
 
     def write(self):
         """This function is written to write the newly created users
@@ -68,6 +83,28 @@ class Users(UserMixin):
             print("Is your query correct? Error: ", str(err))
         except Exception as err:
             print("Something went wrong: ", str(err))
+
+    def update(self):
+        _SQL = "UPDATE users SET username='{}', rollno='{}', email='{}',\
+                password_hash='{}', about_me='{}', last_seen='{}'\
+                WHERE id={}".format(self.username, self.rollno, self.email,\
+                self.password_hash, self.about_me, self.last_seen, self.id)
+
+
+        try:
+            with UseDatabase(app.config["DB_CONFIG"]) as cursor:
+                cursor.execute(_SQL)
+
+        except ConnectionError as err:
+            print("Is your database switched on? Error: ", str(err))
+        except CredentialsError as err:
+            print("User-id/Password issues. Error: ", str(err))
+        except SQLError as err:
+            print("Is your query correct? Error: ", str(err))
+        except Exception as err:
+            print("Something went wrong: ", str(err))
+
+
 
 class Posts():
     """THIS IS A MODEL CLASS FOR THE "posts" TABLE IN DATABASE."""
@@ -155,7 +192,8 @@ def get_user(id=None, username=None, rollno=None,
             # If all is fine then return the user object with the details
             #from the list.
             return Users(id=user[0], username=user[1], rollno=user[2],
-                         email=user[3], password_hash=user[4] )
+                         email=user[3], password_hash=user[4],
+                         about_me=user[5],last_seen=user[6])
         else:
             #If no users with the given info exist just
             #print the following message and return None.
