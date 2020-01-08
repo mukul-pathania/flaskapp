@@ -85,6 +85,10 @@ class Users(UserMixin):
             print("Something went wrong: ", str(err))
 
     def update(self):
+        """This function updates the database with the current information 
+        stored in the object. This function is useful whenever a user
+        updates any of his information and it is to be updated in the 
+        database."""
         _SQL = "UPDATE users SET username='{}', rollno='{}', email='{}',\
                 password_hash='{}', about_me='{}', last_seen='{}'\
                 WHERE id={}".format(self.username, self.rollno, self.email,\

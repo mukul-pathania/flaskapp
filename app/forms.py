@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import TextAreaField
 from wtforms.validators import DataRequired, ValidationError
-from wtforms.validators import Email, EqualTo
+from wtforms.validators import Email, EqualTo, Length
 from app.models import Users, get_user
 #re is imported to use regular expressions to validate the rollno in 
 #registration form.
@@ -51,4 +52,9 @@ class RegistrationForm(FlaskForm):
         result=re.fullmatch("(18|19)[Ii][Tt][0-9]{4}", rollno.data)
         if result is None:
             raise ValidationError("Please provide the correct rollno.")
-        
+       
+
+class EditProfileForm(FlaskForm):
+    username = StringField("Username", validators=[DataRequired()])
+    about_me = TextAreaField("About me", validators=[Length(min=0, max=140)])
+    submit = SubmitField("Submit")
