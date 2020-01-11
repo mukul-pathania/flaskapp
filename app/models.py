@@ -9,12 +9,52 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 #hashlib is imported to use the avatar service in the Users class.
 from hashlib import md5
-
-
+#Imported to use datetime.utcnow()
+from datetime import datetime
 
 @login.user_loader
 def load_user(id):
     return get_user(int(id))
+
+def database_interface(_SQL=None):
+    """ The below defined function is work in progress. It is going to 
+    be created keeping in mind the heavy usage of the databases in the 
+    below code and the redundacy that is created to handle the exceptions
+    while using the database.""" 
+    #This function executes the sql query that is provided to it and 
+    #returns the results to the user if any. This function returns None 
+    #if no query is provided to it and prints an message.
+
+    if _SQL is None:
+        print("No query provided!")
+        return None
+    
+    else:
+        _SQL=str(_SQL)
+
+
+
+    try:
+        with UseDatabase(app.config["DB_CONFIG"]) as cursor:
+            cursor.execute(_SQL)
+            """The below code is written because whenever cursor.fetchall()
+            is called and if it has no result set to fetch from then it 
+            raises an error."""
+            try:
+                return cursor.fetchall()
+            except:
+                return None
+    
+    #The following exceptions are defined in the DBcm module and are 
+    #reused as is from the book Head First Python(Which taught me Python.)
+    except ConnectionError as err:
+        print("Is your database switched on? Error: ", str(err))
+    except CredentialsError as err:
+        print("User-id/Password issues. Error: ", str(err))
+    except SQLError as err:
+        print("Is your query correct? Error: ", str(err))
+    except Exception as err:
+        print("Something went wrong: ", str(err)) 
 
 class Users(UserMixin):
     """THIS IS THE MODEL CLASS FOR THE "users" TABLE IN THE DATABASE."""
@@ -59,8 +99,101 @@ class Users(UserMixin):
         return "https://www.gravatar.com/avatar/{}?d=identicon&s={}".format(
                 digest, size)
 
+
+    def follow(self, user):
+        """This function allows a user to follow othe users. This function 
+        accepts the user object of the user to be followed and then writes
+        to the database."""
+        if not self.is_following(user):
+            #check if the user is not being already followed.
+            _SQL="INSERT INTO followers(follower_id, followed_id) \
+            VALUES ('{}','{}')".format(self.id, user.id)
+
+            database_interface(_SQL)
+
+       
+    
+    def unfollow(self, user):
+        """ This function allow users to unfollow anyone whom he is 
+        following. This function accepts the user object of the user to be 
+        unfollowed and then writes to the database."""
+        if self.is_following(user):
+            #check if user is being followed
+            _SQL = "DELETE FROM followers WHERE (follower_id = '{}' AND \
+            followed_id = '{}')".format(self.id, user.id)
+
+            database_interface(_SQL)
+
+    def is_following(self, user):
+        """This function returns True if the current user follows the 
+        given user otherwise False is returned."""
+
+        _SQL="SELECT * FROM followers WHERE (follower_id = '{}' AND \
+                followed_id = '{}')".format(self.id, user.id)
+        results=database_interface(_SQL)
+        if results:
+            return True
+        return False
+
+    def follower_count(self):
+        """This method returns the count of followers of the user."""
+        _SQL="SELECT count(*) FROM followers WHERE followed_id={}".format(
+                self.id)
+        result=database_interface(_SQL)
+        return result[0][0]
+
+    def followed_count(self):
+        """This method returns the count of the users the user is following."""
+        _SQL="SELECT count(*) FROM followers WHERE follower_id={}".format(
+                self.id)
+        result=database_interface(_SQL)
+        return result[0][0]
+
+    def followed_posts(self):
+        """This function will return the list of posts(objects of class Posts)
+        posted by all the users that this user follows and his own posts arranged according 
+        to timestamp of the posts. """
+        _SQL="SELECT id, body, timestamp, link, user_id FROM posts, followers\
+                WHERE posts.user_id=followers.followed_id AND \
+                followers.follower_id={} order by timestamp \
+                desc".format(self.id)
+        #results is a list of tuples. Tuples contain all the elements
+        #extracted from a row.
+        results=database_interface(_SQL)
+        #The tuples inside the list are also converted to lists.
+        results=[list(result) for result in results]
+        #posts contain the list of Posts objects to be returned
+        posts=list()
+        #Binary data is returned is returned from database(bytearray)
+        #which is converted to usable form.
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                if isinstance(results[i][j], bytearray):
+                    results[i][j]=results[i][j].decode()
+            #After decoding the data is converted to a Posts object and
+            #added to the list.
+            posts.append(Posts(id=results[i][0],body=results[i][1],
+                timestamp=results[i][2], link=results[i][3],
+                user_id=results[i][4]))
+        #Now add Posts written by the user himself.
+        _SQL="SELECT id, body, timestamp, link, user_id from posts WHERE\
+                user_id={}".format(self.id)
+        results=database_interface(_SQL)
+        results=[list(result) for result in results]
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                if isinstance(results[i][j], bytearray):
+                    results[i][j]=results[i][j].decode()
+            posts.append(Posts(id=results[i][0],body=results[i][1],
+                timestamp=results[i][2], link=results[i][3],
+                user_id=results[i][4]))
+        #return sorted list according to timestamp of the posts.
+        return sorted(posts, key=lambda x: x.timestamp, reverse=True)
+
+
+        
     def write(self):
-        """This function is written to write the newly created users
+        """This function helps to write the newly created users
         into the database after they fill out the registration form."""
         
 #        _SQL = "INSERT INTO users (username,rollno,email,password_hash)\
@@ -68,22 +201,11 @@ class Users(UserMixin):
 #                self.email,self.password_hash)
         
 # The above commented out query doesn't work well (unexpectedly). 
-        _SQLsub = "INSERT INTO users(username,rollno,email,password_hash)\
-                VALUES('{}','{}','{}','{}')"
-        _SQL = _SQLsub.format(self.username,self.rollno,self.email,
-                self.password_hash)
-        try:
-            with UseDatabase(app.config["DB_CONFIG"]) as cursor:
-                cursor.execute(_SQL)
-        except ConnectionError as err:
-            print("Is your database switched on? Error: ", str(err))
-        except CredentialsError as err:
-            print("User-id/Password issues. Error: ", str(err))
-        except SQLError as err:
-            print("Is your query correct? Error: ", str(err))
-        except Exception as err:
-            print("Something went wrong: ", str(err))
-
+        _SQL = "INSERT INTO users(username,rollno,email,password_hash)\
+                VALUES('{}','{}','{}','{}')".format(self.username,
+                        self.rollno,self.email,self.password_hash)
+        database_interface(_SQL)
+       
     def update(self):
         """This function updates the database with the current information 
         stored in the object. This function is useful whenever a user
@@ -94,19 +216,8 @@ class Users(UserMixin):
                 WHERE id={}".format(self.username, self.rollno, self.email,\
                 self.password_hash, self.about_me, self.last_seen, self.id)
 
+        database_interface(_SQL)
 
-        try:
-            with UseDatabase(app.config["DB_CONFIG"]) as cursor:
-                cursor.execute(_SQL)
-
-        except ConnectionError as err:
-            print("Is your database switched on? Error: ", str(err))
-        except CredentialsError as err:
-            print("User-id/Password issues. Error: ", str(err))
-        except SQLError as err:
-            print("Is your query correct? Error: ", str(err))
-        except Exception as err:
-            print("Something went wrong: ", str(err))
 
 
 
@@ -119,6 +230,25 @@ class Posts():
         self.timestamp=str(timestamp)
         self.link=str(link)
         self.user_id=int(user_id)
+    
+    def write(self, user):
+        """This function helps in writing the newly created posts to 
+        the database."""
+
+        _SQL="INSERT INTO posts(body, timestamp, link, user_id) VALUES\
+            ('{}','{}','{}',{})".format(self.body, str(datetime.utcnow())[:19],\
+              self.link, user.id)
+        database_interface(_SQL)
+
+    def update(self):
+        """This function updates the database with the current information 
+        stored in the object. This is useful whenever a post is edited."""
+#[:19] is used in datetime.utcnow() to get the string form of time only till 
+#the seconds and not more precise than it.
+        _SQL="""UPDATE posts SET body="{}", timestamp="{}", link="{}" WHERE
+                id={}""".format(self.body, str(datetime.utcnow())[:19],
+                self.link, self.id)
+        database_interface(_SQL)
 
     def __repr__(self):
         return "<Posts {}>".format(self.body)
@@ -174,44 +304,31 @@ def get_user(id=None, username=None, rollno=None,
         # if the  _SQLsub variable is not defined.
         return None
 
-    try:
-        with UseDatabase(app.config["DB_CONFIG"]) as cursor:
-            cursor.execute(_SQL)
-            users_from_database=cursor.fetchall()
-        # If users with the given info exist then it will be 
-        #returned as a list of tuples and I am only intrested 
-        #in the topmost result so I retrieve it.
-        if users_from_database:
-            #As the the database returns binary data(bytearray to be specific)
-            #so I would need to covert it to string but as it is stored in a 
-            #tuple and the fact that tuples are immutable makes me convert
-            #it into list 
-            user=list(users_from_database[0])
-            for i in range(len(user)):
-                #For every object in the list check if they are instances 
-                # of type bytearray if yes, then decode them and store
-                #back in the list 
-                if isinstance(user[i],bytearray):
-                    user[i] = user[i].decode()
-            # If all is fine then return the user object with the details
-            #from the list.
-            return Users(id=user[0], username=user[1], rollno=user[2],
-                         email=user[3], password_hash=user[4],
-                         about_me=user[5],last_seen=user[6])
-        else:
-            #If no users with the given info exist just
-            #print the following message and return None.
-            #print("No users exist with the given info.")
-            return None
-    #The following exceptions are defined in the DBcm module and are 
-    #reused as is from the book Head First Python(Which taught me Python.)
-    except ConnectionError as err:
-        print("Is your database switched on? Error: ", str(err))
-    except CredentialsError as err:
-        print("User-id/Password issues. Error: ", str(err))
-    except SQLError as err:
-        print("Is your query correct? Error: ", str(err))
-    except Exception as err:
-        print("Something went wrong: ", str(err))
+    users_from_database = database_interface(_SQL)    
+    # If users with the given info exist then it will be 
+    #returned as a list of tuples and I am only intrested 
+    #in the topmost result so I retrieve it.
+    if users_from_database:
+        #As the the database returns binary data(bytearray to be specific)
+        #so I would need to covert it to string but as it is stored in a 
+        #tuple and the fact that tuples are immutable makes me convert
+        #it into list 
+        user=list(users_from_database[0])
+        for i in range(len(user)):
+            #For every object in the list check if they are instances 
+            # of type bytearray if yes, then decode them and store
+            #back in the list 
+            if isinstance(user[i],bytearray):
+                user[i] = user[i].decode()
+        # If all is fine then return the user object with the details
+        #from the list.
+        return Users(id=user[0], username=user[1], rollno=user[2],
+                     email=user[3], password_hash=user[4],
+                     about_me=user[5],last_seen=user[6])
+    else:
+        #If no users with the given info exist just
+        #print the following message and return None.
+        #print("No users exist with the given info.")
+        return None
       
 
