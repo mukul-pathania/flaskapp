@@ -1,8 +1,9 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms import TextAreaField
+from wtforms import TextAreaField 
+from wtforms.fields.html5 import URLField
 from wtforms.validators import DataRequired, ValidationError
-from wtforms.validators import Email, EqualTo, Length
+from wtforms.validators import Email, EqualTo, Length, url
 from app.models import Users, get_user
 #re is imported to use regular expressions to validate the rollno in 
 #registration form.
@@ -68,3 +69,10 @@ class EditProfileForm(FlaskForm):
             user = get_user(username=self.username.data)
             if user is not None:
                 raise ValidationError("Please use a different username.")
+
+class PostForm(FlaskForm):
+    body = TextAreaField("Say something", validators=[DataRequired(), 
+        Length(min=1, max=140)])
+    # I will use the validator url() later.
+    link= URLField("Link:", validators=[Length(max=140)])
+    submit = SubmitField("Submit")

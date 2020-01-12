@@ -164,7 +164,7 @@ class Users(UserMixin):
         results=[list(result) for result in results]
         #posts contain the list of Posts objects to be returned
         posts=list()
-        #Binary data is returned is returned from database(bytearray)
+        #Binary data is returned from database(bytearray)
         #which is converted to usable form.
         for i in range(len(results)):
             for j in range(len(results[i])):
@@ -223,13 +223,19 @@ class Users(UserMixin):
 
 class Posts():
     """THIS IS A MODEL CLASS FOR THE "posts" TABLE IN DATABASE."""
-    def __init__(self, id, body, timestamp, link, user_id):
+    def __init__(self, body, timestamp, link, user_id=None,id=None):
         #This will initialise the posts object.
-        self.id=int(id)
+        if id:
+            self.id=int(id)
+        else:
+            self.id=id
         self.body= str(body)
         self.timestamp=str(timestamp)
         self.link=str(link)
         self.user_id=int(user_id)
+        #author will store the Users object of the user who have written
+        #the post.
+        self.author=get_user(self.user_id)
     
     def write(self, user):
         """This function helps in writing the newly created posts to 
@@ -250,6 +256,7 @@ class Posts():
                 self.link, self.id)
         database_interface(_SQL)
 
+    
     def __repr__(self):
         return "<Posts {}>".format(self.body)
 
@@ -331,4 +338,25 @@ def get_user(id=None, username=None, rollno=None,
         #print("No users exist with the given info.")
         return None
       
-
+def get_posts():
+    """This function returns the list of all Posts objects from the 
+    database arranged according to the timestamp."""
+    _SQL="SELECT id, body, timestamp, link, user_id FROM posts\
+           ORDER BY timestamp DESC"
+    results=database_interface(_SQL)
+    #The tuples inside the list are also converted to lists.
+    results=[list(result) for result in results]
+    #posts contain the list of Posts objects to be returned
+    posts=list()
+    #Binary data is returned from database(bytearray)
+    #which is converted to usable form.
+    for i in range(len(results)):
+        for j in range(len(results[i])):
+            if isinstance(results[i][j], bytearray):
+                results[i][j]=results[i][j].decode()
+        #After decoding the data is converted to a Posts object and
+        #added to the list.
+        posts.append(Posts(id=results[i][0],body=results[i][1],
+            timestamp=results[i][2], link=results[i][3],
+            user_id=results[i][4]))
+    return sorted(posts, key=lambda x: x.timestamp, reverse=True)

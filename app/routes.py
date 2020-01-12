@@ -2,9 +2,10 @@ from flask import render_template, flash, redirect, url_for, request
 from flask import abort
 from app import app
 from app.forms import LoginForm, RegistrationForm, EditProfileForm
+from app.forms import PostForm
 from flask_login import current_user, login_user
 from flask_login import logout_user, login_required
-from app.models import Users, get_user
+from app.models import Users, get_user, Posts, get_posts
 from werkzeug.urls import url_parse
 from datetime import datetime
 
@@ -17,18 +18,20 @@ def before_request():
         current_user.update()
 
 
-@app.route("/")
-@app.route("/index")
+@app.route("/", methods=["GET","POST"])
+@app.route("/index", methods=["GET","POST"])
 @login_required
 def index ():
-    user = {"username":"Mukul"}
-    posts = [{"author" : {"username" : "Sunita"},
-            "body" : "Beautiful day in Kharghar"} ,
-            { "author" : {"username" : "Vishav"} ,
-                "body" : "That child was way too cute."}
-            ]
+    form=PostForm()
+    if form.validate_on_submit():
+        post=Posts(body=form.body.data, timestamp=datetime.utcnow(),
+                link=form.link.data, user_id=current_user.id)
+        post.write(current_user)
+        flash("Your post is now live!")
+        return redirect(url_for("index"))
+    posts = current_user.followed_posts()
     return render_template("index.html",
-            title = "Home", 
+            title = "Home", form=form, 
             posts=posts)
 
 
@@ -131,3 +134,10 @@ def unfollow(username):
     current_user.unfollow(user)
     flash("You are not following {}.".format(username))
     return redirect(url_for("user",username=username))
+
+@app.route("/explore")
+@login_required
+def explore():
+    posts=get_posts()
+    return render_template("index.html", title="Explore", posts=posts)
+
