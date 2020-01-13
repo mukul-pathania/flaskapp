@@ -16,7 +16,7 @@ from datetime import datetime
 def load_user(id):
     return get_user(int(id))
 
-def database_interface(_SQL=None):
+def database_interface(_SQL=None, data=None):
     """ The below defined function is work in progress. It is going to 
     be created keeping in mind the heavy usage of the databases in the 
     below code and the redundacy that is created to handle the exceptions
@@ -36,7 +36,18 @@ def database_interface(_SQL=None):
 
     try:
         with UseDatabase(app.config["DB_CONFIG"]) as cursor:
-            cursor.execute(_SQL)
+            """If data argument is provided then it means that the 
+            sql query uses placeholders and those need to be replaced 
+            with the data in the data(a tuple) variable"""
+            
+            #Check if the data variable is passed to function if it is
+            #not passed then it will have the default value of None.
+            if data:
+                cursor.execute(_SQL, data)
+            else:
+                cursor.execute(_SQL)
+           
+           
             """The below code is written because whenever cursor.fetchall()
             is called and if it has no result set to fetch from then it 
             raises an error."""
@@ -106,10 +117,10 @@ class Users(UserMixin):
         to the database."""
         if not self.is_following(user):
             #check if the user is not being already followed.
-            _SQL="INSERT INTO followers(follower_id, followed_id) \
-            VALUES ('{}','{}')".format(self.id, user.id)
-
-            database_interface(_SQL)
+            _SQL = "INSERT INTO followers(follower_id, followed_id)\
+                    VALUES (%s,%s)"
+            data = (self.id, user.id)
+            database_interface(_SQL=_SQL, data=data)
 
        
     
@@ -118,35 +129,37 @@ class Users(UserMixin):
         following. This function accepts the user object of the user to be 
         unfollowed and then writes to the database."""
         if self.is_following(user):
-            #check if user is being followed
-            _SQL = "DELETE FROM followers WHERE (follower_id = '{}' AND \
-            followed_id = '{}')".format(self.id, user.id)
+            #check if user is being followed.
+            _SQL = "DELETE FROM followers WHERE (follower_id=%s AND \
+                    followed_id=%s)"
+            data =(self.id, user.id)
 
-            database_interface(_SQL)
+            database_interface(_SQL=_SQL, data=data)
 
     def is_following(self, user):
         """This function returns True if the current user follows the 
         given user otherwise False is returned."""
 
-        _SQL="SELECT * FROM followers WHERE (follower_id = '{}' AND \
-                followed_id = '{}')".format(self.id, user.id)
-        results=database_interface(_SQL)
+        _SQL="SELECT * FROM followers WHERE (follower_id =%s AND \
+                followed_id =%s)"
+        data=(self.id, user.id)
+        results=database_interface(_SQL=_SQL, data=data)
         if results:
             return True
         return False
 
     def follower_count(self):
         """This method returns the count of followers of the user."""
-        _SQL="SELECT count(*) FROM followers WHERE followed_id={}".format(
-                self.id)
-        result=database_interface(_SQL)
+        _SQL="SELECT count(*) FROM followers WHERE followed_id=%s"
+        data = (self.id,)
+        result=database_interface(_SQL=_SQL, data=data)
         return result[0][0]
 
     def followed_count(self):
         """This method returns the count of the users the user is following."""
-        _SQL="SELECT count(*) FROM followers WHERE follower_id={}".format(
-                self.id)
-        result=database_interface(_SQL)
+        _SQL="SELECT count(*) FROM followers WHERE follower_id=%s"
+        data=(self.id,)
+        result=database_interface(_SQL=_SQL, data=data)
         return result[0][0]
 
     def followed_posts(self):
@@ -155,11 +168,11 @@ class Users(UserMixin):
         to timestamp of the posts. """
         _SQL="SELECT id, body, timestamp, link, user_id FROM posts, followers\
                 WHERE posts.user_id=followers.followed_id AND \
-                followers.follower_id={} order by timestamp \
-                desc".format(self.id)
+                followers.follower_id=%s order by timestamp  desc"
+        data = (self.id,)
         #results is a list of tuples. Tuples contain all the elements
         #extracted from a row.
-        results=database_interface(_SQL)
+        results=database_interface(_SQL=_SQL, data=data)
         #The tuples inside the list are also converted to lists.
         results=[list(result) for result in results]
         #posts contain the list of Posts objects to be returned
@@ -200,23 +213,23 @@ class Users(UserMixin):
 #               VALUES ({},{},{},{})".format(self.username, self.rollno,
 #                self.email,self.password_hash)
         
-# The above commented out query doesn't work well (unexpectedly). 
-        _SQL = "INSERT INTO users(username,rollno,email,password_hash)\
-                VALUES('{}','{}','{}','{}')".format(self.username,
-                        self.rollno,self.email,self.password_hash)
-        database_interface(_SQL)
+# The above commented out query doesn't work well (unexpectedly).
+        _SQL = "INSERT INTO users(username, rollno, email, password_hash)\
+                VALUES (%s,%s,%s,%s)"
+        data = (self.username, self.rollno, self.email, self.password_hash)
+        database_interface(_SQL=_SQL, data=data)
        
     def update(self):
         """This function updates the database with the current information 
         stored in the object. This function is useful whenever a user
         updates any of his information and it is to be updated in the 
         database."""
-        _SQL = "UPDATE users SET username='{}', rollno='{}', email='{}',\
-                password_hash='{}', about_me='{}', last_seen='{}'\
-                WHERE id={}".format(self.username, self.rollno, self.email,\
-                self.password_hash, self.about_me, self.last_seen, self.id)
+        _SQL = "UPDATE users SET username=%s, rollno=%s, email=%s, \
+                password_hash=%s, about_me=%s, last_seen=%s WHERE id=%s"
+        data = (self.username, self.rollno, self.email, self.password_hash,
+                self.about_me, self.last_seen, self.id)
 
-        database_interface(_SQL)
+        database_interface(_SQL=_SQL, data=data)
 
 
 
@@ -241,20 +254,19 @@ class Posts():
         """This function helps in writing the newly created posts to 
         the database."""
 
-        _SQL="INSERT INTO posts(body, timestamp, link, user_id) VALUES\
-            ('{}','{}','{}',{})".format(self.body, str(datetime.utcnow())[:19],\
-              self.link, user.id)
-        database_interface(_SQL)
+        _SQL = "INSERT INTO posts(body, timestamp, link, user_id) VALUES\
+                (%s,%s,%s,%s)"
+        data = (self.body, str(datetime.utcnow())[:19], self.link, user.id)
+        database_interface(_SQL=_SQL, data=data)
 
     def update(self):
         """This function updates the database with the current information 
         stored in the object. This is useful whenever a post is edited."""
 #[:19] is used in datetime.utcnow() to get the string form of time only till 
 #the seconds and not more precise than it.
-        _SQL="""UPDATE posts SET body="{}", timestamp="{}", link="{}" WHERE
-                id={}""".format(self.body, str(datetime.utcnow())[:19],
-                self.link, self.id)
-        database_interface(_SQL)
+        _SQL = "UPDATE posts SET body=%s, timestamp=%s, link=%s WHERE id=%s"
+        data = (self.body, str(datetime.utcow())[:19], self.link, self.id)
+        database_interface(_SQL=_SQL, data=data)
 
     
     def __repr__(self):
@@ -281,16 +293,20 @@ def get_user(id=None, username=None, rollno=None,
     # if id is not provided then the other arguments will be 
     #used(arranged according to ease of lookup in the database)
     if id:
-        _SQLsub="WHERE id={}".format(id)
+        _SQLsub="WHERE id=%s"
+        data = (id,)
                  
     elif username:
-        _SQLsub="WHERE username='{}'".format(username)
+        _SQLsub="WHERE username=%s"
+        data = (username,)
        
     elif rollno:
-        _SQLsub="WHERE rollno='{}'".format(rollno)
+        _SQLsub="WHERE rollno=%s"
+        data = (rollno,)
 
     elif email:
-        _SQLsub="WHERE email='{}'".format(email)
+        _SQLsub="WHERE email=%s"
+        data = (email,)
 
     else:
         #if no arguments are provided then the function return None
@@ -311,7 +327,7 @@ def get_user(id=None, username=None, rollno=None,
         # if the  _SQLsub variable is not defined.
         return None
 
-    users_from_database = database_interface(_SQL)    
+    users_from_database = database_interface(_SQL=_SQL, data=data)    
     # If users with the given info exist then it will be 
     #returned as a list of tuples and I am only intrested 
     #in the topmost result so I retrieve it.
