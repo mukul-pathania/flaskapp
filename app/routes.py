@@ -29,10 +29,19 @@ def index ():
         post.write(current_user)
         flash("Your post is now live!")
         return redirect(url_for("index"))
-    posts = current_user.followed_posts()
+    page=request.args.get("page", 1, type=int)
+    all_posts = current_user.followed_posts()
+    posts_per_page=app.config["POSTS_PER_PAGE"]
+    #The following statement helps implement pagination.
+    posts = all_posts[(page-1)*posts_per_page:page*posts_per_page]
+    next_url = url_for("index", page=page+1)\
+            if (len(all_posts) > page*posts_per_page) else None
+    prev_url = url_for("index", page=page-1)\
+            if (page-1 > 0) else None
     return render_template("index.html",
             title = "Home", form=form, 
-            posts=posts)
+            posts=posts, next_url=next_url,
+            prev_url=prev_url)
 
 
 @app.route("/login", methods = ["GET", "POST"])
@@ -138,6 +147,14 @@ def unfollow(username):
 @app.route("/explore")
 @login_required
 def explore():
-    posts=get_posts()
-    return render_template("index.html", title="Explore", posts=posts)
+    page = request.args.get("page", 1, type=int)
+    posts_per_page = app.config["POSTS_PER_PAGE"]
+    all_posts=get_posts()
+    posts=all_posts[(page-1)*posts_per_page:page*posts_per_page]
+    next_url = url_for("explore", page=page+1)\
+            if (len(all_posts) > page*posts_per_page) else None
+    prev_url = url_for("explore", page=page-1)\
+            if (page-1 > 0) else None
+    return render_template("index.html", title="Explore", posts=posts,
+            next_url=next_url, prev_url=prev_url)
 
