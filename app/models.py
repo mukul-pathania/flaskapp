@@ -11,6 +11,10 @@ from flask_login import UserMixin
 from hashlib import md5
 #Imported to use datetime.utcnow()
 from datetime import datetime
+from time import time
+import jwt
+
+
 
 @login.user_loader
 def load_user(id):
@@ -230,6 +234,21 @@ class Users(UserMixin):
                 self.about_me, self.last_seen, self.id)
 
         database_interface(_SQL=_SQL, data=data)
+
+
+    def get_reset_password_token(self, expires_in=600):
+        return jwt.encode(
+            {"reset_password": self.id, "exp": time() + expires_in},
+            app.config["SECRET_KEY"], algorithm="HS256").decode("utf_8")
+
+    @staticmethod
+    def verify_reset_password_token(token):
+        try:
+            id = jwt.decode(token, app.config["SECRET_KEY"],
+                    algorithms=["HS256"])["reset_password"]
+        except:
+            return
+        return get_user(id)
 
 
 
