@@ -167,7 +167,7 @@ class Users(UserMixin):
         return result[0][0]
 
     def followed_posts(self):
-        """This function will return the list of posts(objects of class Posts)
+        """This method will return the list of posts(objects of class Posts)
         posted by all the users that this user follows and his own posts arranged according 
         to timestamp of the posts. """
         _SQL="SELECT id, body, timestamp, link, user_id FROM posts, followers\
@@ -194,8 +194,28 @@ class Users(UserMixin):
                 user_id=results[i][4]))
         #Now add Posts written by the user himself.
         _SQL="SELECT id, body, timestamp, link, user_id from posts WHERE\
-                user_id={}".format(self.id)
-        results=database_interface(_SQL)
+                user_id=%s"
+        data = (self.id,)
+        results=database_interface(_SQL=_SQL, data=data)
+        results=[list(result) for result in results]
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                if isinstance(results[i][j], bytearray):
+                    results[i][j]=results[i][j].decode()
+            posts.append(Posts(id=results[i][0],body=results[i][1],
+                timestamp=results[i][2], link=results[i][3],
+                user_id=results[i][4]))
+        #return sorted list according to timestamp of the posts.
+        return sorted(posts, key=lambda x: x.timestamp, reverse=True)
+
+    def own_posts(self):
+        """This method returns list of all the posts(objects of class Posts)
+        written by the user arranged according to their timestamp. """
+        posts = list()
+        _SQL="SELECT id, body, timestamp, link, user_id from posts WHERE\
+                user_id=%s"
+        data = (self.id,)
+        results=database_interface(_SQL=_SQL, data=data)
         results=[list(result) for result in results]
         for i in range(len(results)):
             for j in range(len(results[i])):
@@ -208,7 +228,6 @@ class Users(UserMixin):
         return sorted(posts, key=lambda x: x.timestamp, reverse=True)
 
 
-        
     def write(self):
         """This function helps to write the newly created users
         into the database after they fill out the registration form."""

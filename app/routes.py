@@ -110,10 +110,16 @@ def user(username):
         """If no Users object is found with the given username then the
         abort function forces a 404 error."""
         abort(404)
-    posts=[{"author": user, "body": "Test post #1"},
-            {"author": user, "body": "Test post #2"}
-            ]
-    return render_template("user.html", user=user, posts=posts)
+    page = request.args.get("page", 1, type=int)
+    posts_per_page = app.config["POSTS_PER_PAGE"]
+    all_posts=user.own_posts()
+    posts=all_posts[(page-1)*posts_per_page:page*posts_per_page]
+    next_url = url_for("user", username=username, page=page+1)\
+            if (len(all_posts) > page*posts_per_page) else None
+    prev_url = url_for("user", username=username, page=page-1)\
+            if (page-1 > 0) else None
+    return render_template("user.html", user=user, posts=posts,
+            next_url=next_url, prev_url=prev_url)
 
 @app.route("/follow/<username>")
 @login_required
