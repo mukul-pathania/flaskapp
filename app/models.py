@@ -92,7 +92,7 @@ class Users(UserMixin):
         self.email=str(email)
         self.password_hash=str(password_hash)
         self.about_me=str(about_me)
-        self.last_seen=str(last_seen)
+        self.last_seen=last_seen
 
     def __repr__(self):
         return '<Users {}>'.format(self.username)
@@ -281,7 +281,7 @@ class Posts():
         else:
             self.id=id
         self.body= str(body)
-        self.timestamp=str(timestamp)
+        self.timestamp=timestamp
         self.link=str(link)
         self.user_id=int(user_id)
         #author will store the Users object of the user who have written

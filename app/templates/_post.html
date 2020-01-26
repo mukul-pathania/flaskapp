@@ -9,12 +9,14 @@
             <a href="{{ url_for('user', username=post.author.username) }}">
                 {{ post.author.username }}
             </a>
-            says:
+            said: {{ moment(post.timestamp).fromNow() }}
             <br>
             {{ post.body }}
             <br>
             {% if post.link %}
+            <p>Link:
             <a href="{{ post.link }}">Link: {{ post.link }}</a>
+            </p>
             {% endif %}
         </td>
     </tr>
