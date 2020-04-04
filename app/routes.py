@@ -193,3 +193,16 @@ def reset_password(token):
         flash("Your password has been reset.")
         return redirect(url_for("login"))
     return render_template("reset_password.html", form=form)
+
+@app.route("/homework")
+def homework():
+    return render_template("homework.html")
+
+@app.route("/homework/<subject>")
+def assignment(subject):
+    with open("subjects/" + subject + ".csv") as csv:
+        ignore = csv.readline()
+        data = [line.strip().split(",") for line in csv]
+    return render_template("subject.html", data = data, subject = subject)
+
+

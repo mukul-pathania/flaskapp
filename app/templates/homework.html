@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+    <h1>Which subject?</h1>
+    <h2><a href="{{url_for('assignment', subject='chemistry')}}">Chemistry</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='physics')}}">Physics</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='c_programming')}}">C-Programming</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='maths')}}">Maths</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='pce')}}">PCE</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='engg_drawing')}}">Engg. Drawing</a></h2>
+    <br>
+    <h2><a href="{{url_for('assignment', subject='workshop')}}">Workshop</a></h2>
+
+{% endblock %}
+    

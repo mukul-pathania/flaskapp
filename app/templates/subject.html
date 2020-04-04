@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+  {% if data %}
+    <table class="table table-hover">
+        <tr>
+          <td width="70px">
+            <h1> {{subject.title()}} </h1>
+         </td>
+       </tr>
+       <tr>
+           <td>
+           {% for piece in data %}
+           <h2><a href="{{piece[1]}}">{{piece[0]}}</h2>
+           {% endfor %}
+           </td>
+       </tr>
+    </table>
+  {% else %}
+  <h1>{{subject.title()}}</h1>
+  <p>No assignments yet</p>
+
+  {% endif %}
+
+{% endblock %}
