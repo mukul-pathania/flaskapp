@@ -5,6 +5,7 @@
 {% endblock %}
 
 {% block navbar %}
+<div class="main-container">
     <nav class="navbar navbar-default">
         <div class="container">
             <div class="navbar-header">
@@ -47,7 +48,43 @@
 
         {# application content needs to be provided in the app_content block #}
         {% block app_content %}{% endblock %}
+        <style>
+
+            * {
+             box-sizing: border-box;
+            }
+            *:before,*:after {
+             box-sizing: border-box;
+            }
+            html,body {
+             height: 100%;
+             position: relative;
+            }
+            .main-container {
+             min-height: 100vh; /* will cover the 100% of viewport */
+             overflow: hidden;
+             display: block;
+             position: relative;
+             padding-bottom: 100px; /* height of your footer */
+            }
+            footer {
+             position: absolute;
+             bottom: 0;
+             width: 100%;
+             height: 40px;
+             background: linear-gradient(to right, cyan, cyan, #6cf, #6cf, white);
+             left: 0;
+             text-align: center;
+             font-weight: bold;
+            }
+        </style>
+        <footer> 
+            &copy; 2020 Mukul <br> 
+            <a href="https://github.com/mukulpathania96/flaskapp">Code for this website can be viewed here.</a>
+        
+        </footer>
     </div>
+    </div><!--main-container-->
 {% endblock %}
 
 {% block scripts %}
